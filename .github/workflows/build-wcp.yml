@@ -15,6 +15,9 @@ on:
 jobs:
   build-wcp:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for workflow metadata
     
     steps:
       - name: Checkout repository
@@ -41,12 +44,12 @@ jobs:
           mkdir -p ~/proton_download
           cd ~/steamcmd
           
-          # Create SteamCMD script
-          cat > download_proton.txt << 'EOF'
+          # Create SteamCMD script with proper variable expansion
+          cat > download_proton.txt << EOF
           @ShutdownOnFailedCommand 1
           @NoPromptForPassword 1
-          force_install_dir ~/proton_download
-          login ${STEAM_USERNAME} ${STEAM_PASSWORD}
+          force_install_dir $HOME/proton_download
+          login $STEAM_USERNAME $STEAM_PASSWORD
           app_update ${{ inputs.app_id }} validate
           quit
           EOF
@@ -161,7 +164,6 @@ jobs:
             ## Build Information
             - **Proton Version**: ${{ inputs.proton_version }}
             - **Steam App ID**: ${{ inputs.app_id }}
-            - **Build Date**: ${{ github.event.head_commit.timestamp }}
             - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           files: proton-${{ inputs.proton_version }}.wcp
           draft: false

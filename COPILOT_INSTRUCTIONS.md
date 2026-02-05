@@ -5,7 +5,7 @@ This project automates the conversion of Valve's Proton compatibility tool into 
 ## Core Objectives
 1.  **Fetch**: Download specific versions of Proton (e.g., Proton 10.0) using SteamCMD.
 2.  **Transform**: Restructure the downloaded files into the standard Wine hierarchy required by Winlator.
-3.  **Package**: bundle the files and a generated `wcp.json` manifest into a `.wcp` archive.
+3.  **Package**: Bundle the files and a generated `wcp.json` manifest into a `.wcp` archive.
 4.  **Release**: Automatically publish the `.wcp` file as a GitHub Release asset.
 
 ## Technical Constraints & Requirements
