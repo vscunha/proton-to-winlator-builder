@@ -89,18 +89,19 @@ from pathlib import Path
 path = Path(os.environ["METADATA_PATH"])
 try:
     data = json.loads(path.read_text(encoding="utf-8"))
-except json.JSONDecodeError as exc:
-    raise SystemExit(f"Failed to parse metadata JSON: {exc}") from exc
+except json.JSONDecodeError:
+    raise SystemExit("Failed to parse metadata JSON. Check work/metadata.json format.")
 
 proton_version = data.get("proton_version")
 if not proton_version:
-    raise SystemExit("Metadata JSON missing proton_version.")
+    raise SystemExit("Metadata JSON missing proton_version. Re-run the build step.")
 
 print(proton_version)
 PY
 )"
           else
-            echo "::warning::Metadata file not found at ${metadata_path}; using input version."
+            resolved_version="${{ steps.vars.outputs.proton_version }}"
+            echo "::warning::Metadata file not found at ${metadata_path}; using workflow input version."
           fi
           if [[ -z "$resolved_version" ]]; then
             echo "::error::Failed to resolve Proton version from metadata." >&2
