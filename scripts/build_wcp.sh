@@ -21,7 +21,7 @@ Environment variables:
   WCP_FILENAME         Output filename (default: proton-<version>.wcp)
   STEAMCMD_BIN         SteamCMD binary (default: steamcmd)
   FILES_SEARCH_MAX_DEPTH  Max depth when locating Proton files/ (default: 4)
-  METADATA_PATH        Optional metadata output path (default: <work>/metadata.env)
+  METADATA_PATH        Optional metadata output path (default: <work>/metadata.json)
 EOF
 }
 
@@ -42,7 +42,7 @@ WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
 FILES_SEARCH_MAX_DEPTH="${FILES_SEARCH_MAX_DEPTH:-4}"
-METADATA_PATH="${METADATA_PATH:-$WORK_DIR/metadata.env}"
+METADATA_PATH="${METADATA_PATH:-$WORK_DIR/metadata.json}"
 
 : "${STEAM_USERNAME:?STEAM_USERNAME is required}"
 : "${STEAM_PASSWORD:?STEAM_PASSWORD is required}"
@@ -88,7 +88,10 @@ app_update_args+=("validate")
 
 resolved_version="$PROTON_VERSION_INPUT"
 if [[ -z "$resolved_version" || "$resolved_version" == "latest" ]]; then
-  manifest_path="$(find "$download_dir" -maxdepth 2 -name "appmanifest_${PROTON_APP_ID}.acf" -print -quit)"
+  manifest_path="$download_dir/appmanifest_${PROTON_APP_ID}.acf"
+  if [[ ! -f "$manifest_path" ]]; then
+    manifest_path="$(find "$download_dir" -maxdepth 2 -name "appmanifest_${PROTON_APP_ID}.acf" -print -quit)"
+  fi
   if [[ -n "$manifest_path" ]]; then
     resolved_version="$(awk -F'"' '/"buildid"/ {print $4; exit}' "$manifest_path")"
   fi
@@ -109,11 +112,24 @@ if [[ "$WCP_FILENAME" != *.wcp ]]; then
 fi
 
 mkdir -p "$(dirname "$METADATA_PATH")"
-{
-  printf 'PROTON_VERSION=%q\n' "$PROTON_VERSION"
-  printf 'WCP_VERSION=%q\n' "$WCP_VERSION"
-  printf 'WCP_FILENAME=%q\n' "$WCP_FILENAME"
-} > "$METADATA_PATH"
+METADATA_PATH="$METADATA_PATH" \
+PROTON_VERSION="$PROTON_VERSION" \
+WCP_VERSION="$WCP_VERSION" \
+WCP_FILENAME="$WCP_FILENAME" \
+python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+data = {
+    "proton_version": os.environ["PROTON_VERSION"],
+    "wcp_version": os.environ["WCP_VERSION"],
+    "wcp_filename": os.environ["WCP_FILENAME"],
+}
+
+path = Path(os.environ["METADATA_PATH"])
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
 
 proton_root="$download_dir"
 if [[ ! -d "$proton_root/files" ]]; then

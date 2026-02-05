@@ -69,7 +69,7 @@ jobs:
           PROTON_VERSION: ${{ steps.vars.outputs.proton_version }}
           WCP_VERSION: ${{ steps.vars.outputs.wcp_version }}
           PROTON_BRANCH: ${{ steps.vars.outputs.proton_branch }}
-          METADATA_PATH: ${{ github.workspace }}/work/metadata.env
+          METADATA_PATH: ${{ github.workspace }}/work/metadata.json
         run: |
           chmod +x scripts/build_wcp.sh
           ./scripts/build_wcp.sh
@@ -78,12 +78,20 @@ jobs:
         id: meta
         run: |
           resolved_version="${{ steps.vars.outputs.proton_version }}"
-          metadata_path="${{ github.workspace }}/work/metadata.env"
+          metadata_path="${{ github.workspace }}/work/metadata.json"
           if [[ -f "$metadata_path" ]]; then
-            set -a
-            source "$metadata_path"
-            set +a
-            resolved_version="$PROTON_VERSION"
+            resolved_version="$(python3 - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("work/metadata.json")
+data = json.loads(path.read_text(encoding="utf-8"))
+print(data.get("proton_version", ""))
+PY
+)"
+            if [[ -z "$resolved_version" ]]; then
+              resolved_version="${{ steps.vars.outputs.proton_version }}"
+            fi
           fi
           tag_name="${{ steps.vars.outputs.tag_name }}"
           if [[ -z "$tag_name" ]]; then
