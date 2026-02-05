@@ -1,3 +1,4 @@
 dist/
 work/
 *.wcp
+__pycache__/

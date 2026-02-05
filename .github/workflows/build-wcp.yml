@@ -81,24 +81,7 @@ jobs:
           resolved_version="${{ steps.vars.outputs.proton_version }}"
           metadata_path="${{ github.workspace }}/work/metadata.json"
           if [[ -f "$metadata_path" ]]; then
-            resolved_version="$(METADATA_PATH="$metadata_path" python3 - <<'PY'
-import json
-import os
-from pathlib import Path
-
-path = Path(os.environ["METADATA_PATH"])
-try:
-    data = json.loads(path.read_text(encoding="utf-8"))
-except json.JSONDecodeError:
-    raise SystemExit("Failed to parse metadata JSON. Check work/metadata.json format.")
-
-proton_version = data.get("proton_version")
-if not proton_version:
-    raise SystemExit("Metadata JSON missing proton_version. Re-run the build step.")
-
-print(proton_version)
-PY
-)"
+            resolved_version="$(python3 scripts/parse_metadata.py "$metadata_path")"
           else
             resolved_version="${{ steps.vars.outputs.proton_version }}"
             echo "::warning::Metadata file not found at ${metadata_path}; using workflow input version."
