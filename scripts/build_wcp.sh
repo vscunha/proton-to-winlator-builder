@@ -93,7 +93,8 @@ if [[ -z "$resolved_version" || "$resolved_version" == "latest" ]]; then
     resolved_version="$(awk -F'"' '/"buildid"/ {print $4; exit}' "$manifest_path")"
   fi
   if [[ -z "$resolved_version" ]]; then
-    resolved_version="$(date -u +%Y%m%d%H%M)"
+    echo "Unable to determine Proton build ID. Set PROTON_VERSION explicitly." >&2
+    exit 1
   fi
 fi
 

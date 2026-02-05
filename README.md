@@ -7,7 +7,6 @@ Automates converting Valve Proton releases into Winlator `.wcp` packages.
 ```bash
 export STEAM_USERNAME=your_user
 export STEAM_PASSWORD=your_pass
-export PROTON_VERSION=latest
 ./scripts/build_wcp.sh
 ```
 
@@ -15,7 +14,8 @@ The script downloads Proton via SteamCMD, restructures the `files/` tree into th
 Winlator layout, and writes the `.wcp` archive to `./dist`.
 
 If `PROTON_VERSION` is omitted or set to `latest`, the script uses the most
-recent Steam build ID as the version.
+recent Steam build ID as the version. Set `PROTON_VERSION` to a specific release
+when needed.
 
 Local runs expect `steamcmd`, `zip`, and `python3` to be available.
 

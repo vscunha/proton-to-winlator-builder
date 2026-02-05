@@ -78,9 +78,10 @@ jobs:
         id: meta
         run: |
           resolved_version="${{ steps.vars.outputs.proton_version }}"
-          if [[ -f "work/metadata.env" ]]; then
+          metadata_path="${{ github.workspace }}/work/metadata.env"
+          if [[ -f "$metadata_path" ]]; then
             set -a
-            source "work/metadata.env"
+            source "$metadata_path"
             set +a
             resolved_version="$PROTON_VERSION"
           fi
