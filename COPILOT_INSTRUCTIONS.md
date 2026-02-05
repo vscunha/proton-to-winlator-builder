@@ -5,7 +5,7 @@ This project automates the conversion of Valve's Proton compatibility tool into 
 ## Core Objectives
 1.  **Fetch**: Download specific versions of Proton (e.g., Proton 10.0) using SteamCMD.
 2.  **Transform**: Restructure the downloaded files into the standard Wine hierarchy required by Winlator.
-3.  **Package**: bundle the files and a generated `wcp.json` manifest into a `.wcp` archive.
+3.  **Package**: Bundle the files and a generated `wcp.json` manifest into a `.wcp` archive.
 4.  **Release**: Automatically publish the `.wcp` file as a GitHub Release asset.
 
 ## Technical Constraints & Requirements
@@ -20,29 +20,36 @@ This project automates the conversion of Valve's Proton compatibility tool into 
 ## Manifest Structure (wcp.json)
 ```json
 {
-  "name": "Proton 10.0",
-  "version": "10.0-1",
-  "description": "Valve's Proton compatibility layer converted for Winlator",
-  "wine_version": "proton-10.0"
+  "name": "Proton <version>",
+  "version": "<version>",
+  "description": "Proton compatibility layer for Winlator",
+  "author": "Valve Software (repackaged)",
+  "wine_version": "<corresponding_wine_version>"
 }
 ```
 
-## Key Implementation Details
-*   **File Restructuring**: Proton's directory structure differs from Wine's. The conversion must map Proton paths to expected Wine paths (e.g., `files/` → `bin/`, `lib/`, `share/`).
-*   **Dependency Handling**: Ensure all necessary libraries and dependencies are included in the package.
-*   **Versioning**: The version in `wcp.json` should match the Proton version being packaged.
-
-## Common Pitfalls to Avoid
-1.  **Nested Folders**: Don't create a zip with a parent folder containing the structure. The zip must extract directly to `bin/`, `lib/`, `share/`, and `wcp.json`.
-2.  **Steam Guard**: CI will fail if the Steam account has Steam Guard enabled without proper handling.
-3.  **Missing Files**: Ensure all required Wine components are copied during transformation.
-
 ## Development Workflow
-1.  Test locally with a valid Steam account (Steam Guard disabled or TOTP configured).
-2.  Verify the generated `.wcp` file structure before uploading to releases.
-3.  Always validate the `wcp.json` manifest is correctly generated.
+1.  **Script Development**: All conversion logic should be implemented in shell scripts or Python.
+2.  **Testing**: Test locally before pushing to CI.
+3.  **Secrets Management**: Never commit Steam credentials. Use GitHub Secrets.
+4.  **Versioning**: The Proton version should be configurable (e.g., via workflow input or environment variable).
 
-## GitHub Actions Integration
-*   The workflow should trigger on manual dispatch or on specific tags/releases.
-*   Use repository secrets for `STEAM_USERNAME` and `STEAM_PASSWORD`.
-*   The final `.wcp` file should be uploaded as a release asset.
+## File Structure Expectations
+After transformation, the directory structure should look like:
+```
+output/
+├── bin/          # Executables (wine, wineserver, etc.)
+├── lib/          # Libraries (wine libraries, .so files)
+├── share/        # Shared resources (wine data files)
+└── wcp.json      # Manifest file
+```
+
+## Known Issues & Workarounds
+*   **Steam Guard**: CI cannot interactively handle Steam Guard. Use an account with it disabled or implement TOTP-based automation.
+*   **Download Failures**: SteamCMD can be flaky. Implement retry logic.
+*   **Large Files**: Proton downloads can be 1GB+. Ensure adequate storage and timeout settings in CI.
+
+## References
+*   Valve Proton: https://github.com/ValveSoftware/Proton
+*   SteamCMD Documentation: https://developer.valvesoftware.com/wiki/SteamCMD
+*   Winlator: https://github.com/brunodev85/winlator

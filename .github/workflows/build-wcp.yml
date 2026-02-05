@@ -4,113 +4,169 @@ on:
   workflow_dispatch:
     inputs:
       proton_version:
-        description: Proton version label (leave blank for latest)
-        required: false
-        default: "latest"
-      wcp_version:
-        description: wcp.json version string
-        required: false
-        default: ""
-      proton_branch:
-        description: Optional Steam beta branch
-        required: false
-  push:
-    tags:
-      - "proton-*"
-
-permissions:
-  contents: write
+        description: 'Proton version to build (e.g., 10.0)'
+        required: true
+        default: '10.0'
+      app_id:
+        description: 'Steam App ID for Proton (e.g., 2348590 for Proton 10.0)'
+        required: true
+        default: '2348590'
 
 jobs:
-  build:
+  build-wcp:
     runs-on: ubuntu-latest
-    env:
-      STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
-      STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
-      STEAM_GUARD_CODE: ${{ secrets.STEAM_GUARD_CODE }}
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for workflow metadata
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y steamcmd zip
-          apt-cache policy steamcmd
-          steamcmd_version=$(dpkg-query -W -f='${Version}' steamcmd)
-          echo "steamcmd version: ${steamcmd_version}" >> "$GITHUB_STEP_SUMMARY"
+          sudo apt-get install -y wget lib32gcc-s1 zip
 
-      - name: Resolve versions
-        id: vars
+      - name: Download and install SteamCMD
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            proton_version="${{ inputs.proton_version }}"
-            wcp_version="${{ inputs.wcp_version }}"
-            proton_branch="${{ inputs.proton_branch }}"
-            if [[ -z "$proton_version" ]]; then
-              proton_version="latest"
-            fi
-            tag_name=""
-          else
-            tag="${GITHUB_REF_NAME}"
-            proton_version="${tag#proton-}"
-            wcp_version="$proton_version"
-            proton_branch=""
-            tag_name="$tag"
-          fi
+          mkdir -p ~/steamcmd
+          cd ~/steamcmd
+          wget https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+          tar -xvzf steamcmd_linux.tar.gz
+          chmod +x steamcmd.sh
 
-          echo "proton_version=$proton_version" >> "$GITHUB_OUTPUT"
-          echo "wcp_version=$wcp_version" >> "$GITHUB_OUTPUT"
-          echo "proton_branch=$proton_branch" >> "$GITHUB_OUTPUT"
-          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
-
-      - name: Build WCP package
+      - name: Download Proton with SteamCMD
         env:
-          PROTON_VERSION: ${{ steps.vars.outputs.proton_version }}
-          WCP_VERSION: ${{ steps.vars.outputs.wcp_version }}
-          PROTON_BRANCH: ${{ steps.vars.outputs.proton_branch }}
-          METADATA_PATH: ${{ github.workspace }}/work/metadata.json
+          STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
         run: |
-          chmod +x scripts/build_wcp.sh
-          ./scripts/build_wcp.sh
-
-      - name: Capture build metadata
-        id: meta
-        run: |
-          set -euo pipefail
-          resolved_version="${{ steps.vars.outputs.proton_version }}"
-          metadata_path="${{ github.workspace }}/work/metadata.json"
-          if [[ -f "$metadata_path" ]]; then
-            if resolved_output="$(python3 ./scripts/parse_metadata.py "$metadata_path")"; then
-              resolved_version="$resolved_output"
+          mkdir -p ~/proton_download
+          cd ~/steamcmd
+          
+          # Create SteamCMD script with proper variable expansion
+          cat > download_proton.txt << EOF
+          @ShutdownOnFailedCommand 1
+          @NoPromptForPassword 1
+          force_install_dir $HOME/proton_download
+          login $STEAM_USERNAME $STEAM_PASSWORD
+          app_update ${{ inputs.app_id }} validate
+          quit
+          EOF
+          
+          # Run SteamCMD with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Download attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+            
+            if ./steamcmd.sh +runscript download_proton.txt; then
+              echo "Download successful!"
+              break
             else
-              echo "::error::Failed to parse metadata from ${metadata_path}."
-              exit 1
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "Download failed, retrying in 10 seconds..."
+                sleep 10
+              else
+                echo "Download failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
             fi
-          else
-            input_version="${{ steps.vars.outputs.proton_version }}"
-            if [[ -z "$input_version" || "$input_version" == "latest" ]]; then
-              echo "::error::Metadata file missing and no explicit Proton version provided."
-              exit 1
-            fi
-            resolved_version="$input_version"
-            echo "::warning::Metadata file not found at ${metadata_path}; using workflow input version."
-          fi
-          if [[ -z "$resolved_version" ]]; then
-            echo "::error::Failed to resolve Proton version from metadata." >&2
-            exit 1
-          fi
-          tag_name="${{ steps.vars.outputs.tag_name }}"
-          if [[ -z "$tag_name" ]]; then
-            tag_name="proton-$resolved_version"
-          fi
-          echo "proton_version=$resolved_version" >> "$GITHUB_OUTPUT"
-          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+          done
 
-      - name: Publish release asset
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+      - name: Transform Proton to Wine structure
+        run: |
+          mkdir -p ~/wcp_output/{bin,lib,share}
+          
+          # Copy executables to bin/
+          if [ -d ~/proton_download/files/bin ]; then
+            cp -r ~/proton_download/files/bin/* ~/wcp_output/bin/ || true
+          fi
+          
+          # Copy libraries to lib/
+          if [ -d ~/proton_download/files/lib ]; then
+            cp -r ~/proton_download/files/lib/* ~/wcp_output/lib/ || true
+          fi
+          if [ -d ~/proton_download/files/lib64 ]; then
+            cp -r ~/proton_download/files/lib64/* ~/wcp_output/lib/ || true
+          fi
+          
+          # Copy shared resources to share/
+          if [ -d ~/proton_download/files/share ]; then
+            cp -r ~/proton_download/files/share/* ~/wcp_output/share/ || true
+          fi
+          
+          # List the structure for verification
+          echo "=== Output structure ==="
+          ls -la ~/wcp_output/
+          echo "=== bin/ ==="
+          ls -la ~/wcp_output/bin/ | head -20
+          echo "=== lib/ ==="
+          ls -la ~/wcp_output/lib/ | head -20
+          echo "=== share/ ==="
+          ls -la ~/wcp_output/share/ | head -20
+
+      - name: Generate wcp.json manifest
+        run: |
+          cat > ~/wcp_output/wcp.json << EOF
+          {
+            "name": "Proton ${{ inputs.proton_version }}",
+            "version": "${{ inputs.proton_version }}",
+            "description": "Proton compatibility layer for Winlator",
+            "author": "Valve Software (repackaged)",
+            "wine_version": "wine-${{ inputs.proton_version }}"
+          }
+          EOF
+          
+          echo "=== Generated wcp.json ==="
+          cat ~/wcp_output/wcp.json
+
+      - name: Create WCP archive
+        run: |
+          cd ~/wcp_output
+          
+          # Verify structure before zipping
+          echo "=== Files to be included in WCP ==="
+          ls -la
+          
+          # Create zip archive (wcp.json must be at root)
+          zip -r proton-${{ inputs.proton_version }}.wcp bin/ lib/ share/ wcp.json
+          
+          # Move to workspace for artifact upload
+          mv proton-${{ inputs.proton_version }}.wcp ${{ github.workspace }}/
+          
+          echo "=== WCP archive created ==="
+          ls -lh ${{ github.workspace }}/proton-${{ inputs.proton_version }}.wcp
+
+      - name: Upload WCP as artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ steps.meta.outputs.tag_name }}
-          name: Proton ${{ steps.meta.outputs.proton_version }}
-          files: dist/*.wcp
-          target_commitish: ${{ github.sha }}
+          name: proton-${{ inputs.proton_version }}-wcp
+          path: proton-${{ inputs.proton_version }}.wcp
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: proton-${{ inputs.proton_version }}
+          name: Proton ${{ inputs.proton_version }} WCP
+          body: |
+            # Proton ${{ inputs.proton_version }} WCP Package
+            
+            Automated build of Proton ${{ inputs.proton_version }} converted to Winlator Custom Package format.
+            
+            ## Installation
+            1. Download the `.wcp` file
+            2. Import it into Winlator on your Android device
+            
+            ## Build Information
+            - **Proton Version**: ${{ inputs.proton_version }}
+            - **Steam App ID**: ${{ inputs.app_id }}
+            - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: proton-${{ inputs.proton_version }}.wcp
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
