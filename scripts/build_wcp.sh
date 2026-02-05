@@ -85,7 +85,15 @@ app_update_args+=("validate")
 
 proton_root="$download_dir"
 if [[ ! -d "$proton_root/files" ]]; then
-  files_dir="$(find "$download_dir" -maxdepth "$FILES_SEARCH_MAX_DEPTH" -type d -name files -print -quit)"
+  files_dir=""
+  shopt -s nullglob
+  files_candidates=("$download_dir"/*/files "$download_dir"/*/*/files)
+  shopt -u nullglob
+  if ((${#files_candidates[@]} > 0)); then
+    files_dir="${files_candidates[0]}"
+  else
+    files_dir="$(find "$download_dir" -maxdepth "$FILES_SEARCH_MAX_DEPTH" -type d -name files -print -quit)"
+  fi
   if [[ -z "$files_dir" ]]; then
     echo "Unable to locate Proton files directory in $download_dir" >&2
     exit 1
