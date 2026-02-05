@@ -37,6 +37,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y steamcmd zip
           apt-cache policy steamcmd
+          steamcmd_version=$(dpkg-query -W -f='${Version}' steamcmd)
+          echo "steamcmd version: ${steamcmd_version}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resolve versions
         id: vars

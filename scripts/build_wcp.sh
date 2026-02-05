@@ -20,6 +20,7 @@ Environment variables:
   OUTPUT_DIR           Output directory (default: ./dist)
   WCP_FILENAME         Output filename (default: proton-<version>.wcp)
   STEAMCMD_BIN         SteamCMD binary (default: steamcmd)
+  FILES_SEARCH_MAX_DEPTH  Max depth when locating Proton files/ (default: 4)
 EOF
 }
 
@@ -39,7 +40,7 @@ WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
 WCP_FILENAME="${WCP_FILENAME:-proton-${PROTON_VERSION}.wcp}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
-FILES_SEARCH_MAX_DEPTH=4
+FILES_SEARCH_MAX_DEPTH="${FILES_SEARCH_MAX_DEPTH:-4}"
 
 if [[ "$WCP_FILENAME" != *.wcp ]]; then
   WCP_FILENAME="${WCP_FILENAME}.wcp"
@@ -113,7 +114,7 @@ wcp_path="$OUTPUT_DIR/$WCP_FILENAME"
 rm -f "$wcp_path"
 (
   cd "$stage_dir"
-  zip -r "$wcp_path" .
+  zip -r -9 -X "$wcp_path" .
 )
 
 echo "WCP package created at $wcp_path"
