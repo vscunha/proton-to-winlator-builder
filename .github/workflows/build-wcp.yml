@@ -1,0 +1,72 @@
+name: Build Proton WCP
+
+on:
+  workflow_dispatch:
+    inputs:
+      proton_version:
+        description: Proton version label (e.g., 10.0)
+        required: true
+        default: "10.0"
+      wcp_version:
+        description: wcp.json version string
+        required: true
+        default: "10.0-1"
+      proton_branch:
+        description: Optional Steam beta branch
+        required: false
+  push:
+    tags:
+      - "proton-*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+      STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
+      STEAM_GUARD_CODE: ${{ secrets.STEAM_GUARD_CODE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y steamcmd zip
+
+      - name: Resolve versions
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            proton_version="${{ inputs.proton_version }}"
+            wcp_version="${{ inputs.wcp_version }}"
+            proton_branch="${{ inputs.proton_branch }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            proton_version="${tag#proton-}"
+            wcp_version="$proton_version"
+            proton_branch=""
+          fi
+
+          echo "proton_version=$proton_version" >> "$GITHUB_OUTPUT"
+          echo "wcp_version=$wcp_version" >> "$GITHUB_OUTPUT"
+          echo "proton_branch=$proton_branch" >> "$GITHUB_OUTPUT"
+          echo "tag_name=proton-$proton_version" >> "$GITHUB_OUTPUT"
+
+      - name: Build WCP package
+        env:
+          PROTON_VERSION: ${{ steps.vars.outputs.proton_version }}
+          WCP_VERSION: ${{ steps.vars.outputs.wcp_version }}
+          PROTON_BRANCH: ${{ steps.vars.outputs.proton_branch }}
+        run: |
+          chmod +x scripts/build_wcp.sh
+          ./scripts/build_wcp.sh
+
+      - name: Publish release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag_name }}
+          name: Proton ${{ steps.vars.outputs.proton_version }}
+          files: dist/*.wcp
+          target_commitish: ${{ github.sha }}
