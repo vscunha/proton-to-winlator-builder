@@ -59,6 +59,11 @@ if ! command -v zip >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required to generate wcp.json" >&2
+  exit 1
+fi
+
 download_dir="$WORK_DIR/proton"
 stage_dir="$WORK_DIR/stage"
 
@@ -85,15 +90,7 @@ app_update_args+=("validate")
 
 proton_root="$download_dir"
 if [[ ! -d "$proton_root/files" ]]; then
-  files_dir=""
-  shopt -s nullglob
-  files_candidates=("$download_dir"/*/files "$download_dir"/*/*/files)
-  shopt -u nullglob
-  if ((${#files_candidates[@]} > 0)); then
-    files_dir="${files_candidates[0]}"
-  else
-    files_dir="$(find "$download_dir" -maxdepth "$FILES_SEARCH_MAX_DEPTH" -type d -name files -print -quit)"
-  fi
+  files_dir="$(find "$download_dir" -maxdepth "$FILES_SEARCH_MAX_DEPTH" -type d -name files -print -quit)"
   if [[ -z "$files_dir" ]]; then
     echo "Unable to locate Proton files directory in $download_dir" >&2
     exit 1
@@ -109,14 +106,26 @@ fi
 
 cp -a "$files_dir/." "$stage_dir/"
 
-cat >"$stage_dir/wcp.json" <<EOF
-{
-  "name": "$PROTON_NAME",
-  "version": "$WCP_VERSION",
-  "description": "$WCP_DESCRIPTION",
-  "wine_version": "$WINE_VERSION"
+WCP_JSON_PATH="$stage_dir/wcp.json" \
+PROTON_NAME="$PROTON_NAME" \
+WCP_VERSION="$WCP_VERSION" \
+WCP_DESCRIPTION="$WCP_DESCRIPTION" \
+WINE_VERSION="$WINE_VERSION" \
+python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+data = {
+    "name": os.environ["PROTON_NAME"],
+    "version": os.environ["WCP_VERSION"],
+    "description": os.environ["WCP_DESCRIPTION"],
+    "wine_version": os.environ["WINE_VERSION"],
 }
-EOF
+
+path = Path(os.environ["WCP_JSON_PATH"])
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
 
 wcp_path="$OUTPUT_DIR/$WCP_FILENAME"
 rm -f "$wcp_path"

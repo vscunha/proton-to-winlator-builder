@@ -30,7 +30,7 @@ jobs:
       STEAM_GUARD_CODE: ${{ secrets.STEAM_GUARD_CODE }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install dependencies
         run: |
@@ -69,7 +69,7 @@ jobs:
           ./scripts/build_wcp.sh
 
       - name: Publish release asset
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           tag_name: ${{ steps.vars.outputs.tag_name }}
           name: Proton ${{ steps.vars.outputs.proton_version }}

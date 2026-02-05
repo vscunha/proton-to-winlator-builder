@@ -15,6 +15,8 @@ export WCP_VERSION=10.0-1
 The script downloads Proton via SteamCMD, restructures the `files/` tree into the
 Winlator layout, and writes the `.wcp` archive to `./dist`.
 
+Local runs expect `steamcmd`, `zip`, and `python3` to be available.
+
 ## GitHub Actions
 
 The workflow `.github/workflows/build-wcp.yml` can be triggered manually or via
