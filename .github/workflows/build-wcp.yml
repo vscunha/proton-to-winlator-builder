@@ -77,6 +77,7 @@ jobs:
       - name: Capture build metadata
         id: meta
         run: |
+          set -euo pipefail
           resolved_version="${{ steps.vars.outputs.proton_version }}"
           metadata_path="${{ github.workspace }}/work/metadata.json"
           if [[ -f "$metadata_path" ]]; then
@@ -86,13 +87,24 @@ import os
 from pathlib import Path
 
 path = Path(os.environ["METADATA_PATH"])
-data = json.loads(path.read_text(encoding="utf-8"))
-print(data.get("proton_version", ""))
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+except json.JSONDecodeError as exc:
+    raise SystemExit(f"Failed to parse metadata JSON: {exc}") from exc
+
+proton_version = data.get("proton_version")
+if not proton_version:
+    raise SystemExit("Metadata JSON missing proton_version.")
+
+print(proton_version)
 PY
 )"
-            if [[ -z "$resolved_version" ]]; then
-              resolved_version="${{ steps.vars.outputs.proton_version }}"
-            fi
+          else
+            echo "::warning::Metadata file not found at ${metadata_path}; using input version."
+          fi
+          if [[ -z "$resolved_version" ]]; then
+            echo "::error::Failed to resolve Proton version from metadata." >&2
+            exit 1
           fi
           tag_name="${{ steps.vars.outputs.tag_name }}"
           if [[ -z "$tag_name" ]]; then

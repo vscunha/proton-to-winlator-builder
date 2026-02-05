@@ -98,6 +98,10 @@ if [[ -z "$version_input" || "$version_input" == "latest" ]]; then
       echo "Found manifest at $manifest_path but could not extract build ID." >&2
       exit 1
     fi
+    if [[ ! "$resolved_version" =~ ^[0-9]+$ ]]; then
+      echo "Extracted build ID '$resolved_version' from $manifest_path is invalid." >&2
+      exit 1
+    fi
   fi
   if [[ -z "$resolved_version" ]]; then
     echo "Unable to determine Proton build ID. Set PROTON_VERSION explicitly." >&2
