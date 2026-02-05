@@ -18,7 +18,7 @@ def main() -> int:
         print(f"Metadata file not found: {path}", file=sys.stderr)
         return 1
     except json.JSONDecodeError:
-        print("Failed to parse metadata JSON. Check work/metadata.json format.", file=sys.stderr)
+        print(f"Failed to parse metadata JSON. Check {path} format.", file=sys.stderr)
         return 1
 
     proton_version = data.get("proton_version")

@@ -81,7 +81,7 @@ jobs:
           resolved_version="${{ steps.vars.outputs.proton_version }}"
           metadata_path="${{ github.workspace }}/work/metadata.json"
           if [[ -f "$metadata_path" ]]; then
-            if resolved_output="$(python3 scripts/parse_metadata.py "$metadata_path")"; then
+            if resolved_output="$(python3 ./scripts/parse_metadata.py "$metadata_path")"; then
               resolved_version="$resolved_output"
             else
               echo "::error::Failed to parse metadata from ${metadata_path}." >&2
