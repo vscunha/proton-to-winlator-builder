@@ -80,11 +80,12 @@ jobs:
           resolved_version="${{ steps.vars.outputs.proton_version }}"
           metadata_path="${{ github.workspace }}/work/metadata.json"
           if [[ -f "$metadata_path" ]]; then
-            resolved_version="$(python3 - <<'PY'
+            resolved_version="$(METADATA_PATH="$metadata_path" python3 - <<'PY'
 import json
+import os
 from pathlib import Path
 
-path = Path("work/metadata.json")
+path = Path(os.environ["METADATA_PATH"])
 data = json.loads(path.read_text(encoding="utf-8"))
 print(data.get("proton_version", ""))
 PY

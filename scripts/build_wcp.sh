@@ -86,19 +86,25 @@ app_update_args+=("validate")
   "${app_update_args[@]}" \
   +quit
 
-resolved_version="$PROTON_VERSION_INPUT"
-if [[ -z "$resolved_version" || "$resolved_version" == "latest" ]]; then
+version_input="$PROTON_VERSION_INPUT"
+if [[ -z "$version_input" || "$version_input" == "latest" ]]; then
   manifest_path="$download_dir/appmanifest_${PROTON_APP_ID}.acf"
   if [[ ! -f "$manifest_path" ]]; then
     manifest_path="$(find "$download_dir" -maxdepth 2 -name "appmanifest_${PROTON_APP_ID}.acf" -print -quit)"
   fi
   if [[ -n "$manifest_path" ]]; then
     resolved_version="$(awk -F'"' '/"buildid"/ {print $4; exit}' "$manifest_path")"
+    if [[ -z "$resolved_version" ]]; then
+      echo "Found manifest at $manifest_path but could not extract build ID." >&2
+      exit 1
+    fi
   fi
   if [[ -z "$resolved_version" ]]; then
     echo "Unable to determine Proton build ID. Set PROTON_VERSION explicitly." >&2
     exit 1
   fi
+else
+  resolved_version="$version_input"
 fi
 
 PROTON_VERSION="$resolved_version"
