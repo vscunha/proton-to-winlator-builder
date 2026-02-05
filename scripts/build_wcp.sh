@@ -93,13 +93,9 @@ if [[ -z "$version_input" || "$version_input" == "latest" ]]; then
     manifest_path="$(find "$download_dir" -maxdepth 2 -name "appmanifest_${PROTON_APP_ID}.acf" -print -quit)"
   fi
   if [[ -n "$manifest_path" ]]; then
-    resolved_version="$(grep -m1 -E '"buildid"[[:space:]]+"[0-9]+"' "$manifest_path" | sed -nE 's/^.*"buildid"[[:space:]]+"([0-9]+)".*$/\1/p')"
+    resolved_version="$(sed -nE 's/^[[:space:]]*"buildid"[[:space:]]+"([0-9]+)".*/\1/p; q' "$manifest_path")"
     if [[ -z "$resolved_version" ]]; then
       echo "Found manifest at $manifest_path but could not extract build ID." >&2
-      exit 1
-    fi
-    if [[ ! "$resolved_version" =~ ^[0-9]+$ ]]; then
-      echo "Extracted build ID '$resolved_version' from $manifest_path is invalid." >&2
       exit 1
     fi
   fi
