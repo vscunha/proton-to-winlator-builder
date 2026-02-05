@@ -1,0 +1,172 @@
+name: Build Proton WCP
+
+on:
+  workflow_dispatch:
+    inputs:
+      proton_version:
+        description: 'Proton version to build (e.g., 10.0)'
+        required: true
+        default: '10.0'
+      app_id:
+        description: 'Steam App ID for Proton (e.g., 2348590 for Proton 10.0)'
+        required: true
+        default: '2348590'
+
+jobs:
+  build-wcp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for workflow metadata
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget lib32gcc-s1 zip
+
+      - name: Download and install SteamCMD
+        run: |
+          mkdir -p ~/steamcmd
+          cd ~/steamcmd
+          wget https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+          tar -xvzf steamcmd_linux.tar.gz
+          chmod +x steamcmd.sh
+
+      - name: Download Proton with SteamCMD
+        env:
+          STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
+        run: |
+          mkdir -p ~/proton_download
+          cd ~/steamcmd
+          
+          # Create SteamCMD script with proper variable expansion
+          cat > download_proton.txt << EOF
+          @ShutdownOnFailedCommand 1
+          @NoPromptForPassword 1
+          force_install_dir $HOME/proton_download
+          login $STEAM_USERNAME $STEAM_PASSWORD
+          app_update ${{ inputs.app_id }} validate
+          quit
+          EOF
+          
+          # Run SteamCMD with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Download attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+            
+            if ./steamcmd.sh +runscript download_proton.txt; then
+              echo "Download successful!"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "Download failed, retrying in 10 seconds..."
+                sleep 10
+              else
+                echo "Download failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Transform Proton to Wine structure
+        run: |
+          mkdir -p ~/wcp_output/{bin,lib,share}
+          
+          # Copy executables to bin/
+          if [ -d ~/proton_download/files/bin ]; then
+            cp -r ~/proton_download/files/bin/* ~/wcp_output/bin/ || true
+          fi
+          
+          # Copy libraries to lib/
+          if [ -d ~/proton_download/files/lib ]; then
+            cp -r ~/proton_download/files/lib/* ~/wcp_output/lib/ || true
+          fi
+          if [ -d ~/proton_download/files/lib64 ]; then
+            cp -r ~/proton_download/files/lib64/* ~/wcp_output/lib/ || true
+          fi
+          
+          # Copy shared resources to share/
+          if [ -d ~/proton_download/files/share ]; then
+            cp -r ~/proton_download/files/share/* ~/wcp_output/share/ || true
+          fi
+          
+          # List the structure for verification
+          echo "=== Output structure ==="
+          ls -la ~/wcp_output/
+          echo "=== bin/ ==="
+          ls -la ~/wcp_output/bin/ | head -20
+          echo "=== lib/ ==="
+          ls -la ~/wcp_output/lib/ | head -20
+          echo "=== share/ ==="
+          ls -la ~/wcp_output/share/ | head -20
+
+      - name: Generate wcp.json manifest
+        run: |
+          cat > ~/wcp_output/wcp.json << EOF
+          {
+            "name": "Proton ${{ inputs.proton_version }}",
+            "version": "${{ inputs.proton_version }}",
+            "description": "Proton compatibility layer for Winlator",
+            "author": "Valve Software (repackaged)",
+            "wine_version": "wine-${{ inputs.proton_version }}"
+          }
+          EOF
+          
+          echo "=== Generated wcp.json ==="
+          cat ~/wcp_output/wcp.json
+
+      - name: Create WCP archive
+        run: |
+          cd ~/wcp_output
+          
+          # Verify structure before zipping
+          echo "=== Files to be included in WCP ==="
+          ls -la
+          
+          # Create zip archive (wcp.json must be at root)
+          zip -r proton-${{ inputs.proton_version }}.wcp bin/ lib/ share/ wcp.json
+          
+          # Move to workspace for artifact upload
+          mv proton-${{ inputs.proton_version }}.wcp ${{ github.workspace }}/
+          
+          echo "=== WCP archive created ==="
+          ls -lh ${{ github.workspace }}/proton-${{ inputs.proton_version }}.wcp
+
+      - name: Upload WCP as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: proton-${{ inputs.proton_version }}-wcp
+          path: proton-${{ inputs.proton_version }}.wcp
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: proton-${{ inputs.proton_version }}
+          name: Proton ${{ inputs.proton_version }} WCP
+          body: |
+            # Proton ${{ inputs.proton_version }} WCP Package
+            
+            Automated build of Proton ${{ inputs.proton_version }} converted to Winlator Custom Package format.
+            
+            ## Installation
+            1. Download the `.wcp` file
+            2. Import it into Winlator on your Android device
+            
+            ## Build Information
+            - **Proton Version**: ${{ inputs.proton_version }}
+            - **Steam App ID**: ${{ inputs.app_id }}
+            - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: proton-${{ inputs.proton_version }}.wcp
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
