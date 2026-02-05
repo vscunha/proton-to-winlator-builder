@@ -11,6 +11,9 @@ on:
         description: 'Steam App ID for Proton (e.g., 2348590 for Proton 10.0)'
         required: true
         default: '2348590'
+  push:
+    tags:
+      - '*'
 
 jobs:
   build-wcp:
@@ -18,10 +21,27 @@ jobs:
     permissions:
       contents: write  # Required for creating releases
       actions: read    # Required for workflow metadata
+    env:
+      APP_ID: ${{ inputs.app_id || '2348590' }}
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set Proton metadata
+        run: |
+          if [ -n "${{ inputs.proton_version }}" ]; then
+            version="${{ inputs.proton_version }}"
+          else
+            version="${GITHUB_REF_NAME#proton-}"
+          fi
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tag_name="${GITHUB_REF_NAME}"
+          else
+            tag_name="proton-$version"
+          fi
+          echo "PROTON_VERSION=$version" >> "$GITHUB_ENV"
+          echo "TAG_NAME=$tag_name" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: |
@@ -50,7 +70,7 @@ jobs:
           @NoPromptForPassword 1
           force_install_dir $HOME/proton_download
           login $STEAM_USERNAME $STEAM_PASSWORD
-          app_update ${{ inputs.app_id }} validate
+          app_update ${{ env.APP_ID }} validate
           quit
           EOF
           
@@ -112,11 +132,11 @@ jobs:
         run: |
           cat > ~/wcp_output/wcp.json << EOF
           {
-            "name": "Proton ${{ inputs.proton_version }}",
-            "version": "${{ inputs.proton_version }}",
+            "name": "Proton ${{ env.PROTON_VERSION }}",
+            "version": "${{ env.PROTON_VERSION }}",
             "description": "Proton compatibility layer for Winlator",
             "author": "Valve Software (repackaged)",
-            "wine_version": "wine-${{ inputs.proton_version }}"
+            "wine_version": "wine-${{ env.PROTON_VERSION }}"
           }
           EOF
           
@@ -132,40 +152,40 @@ jobs:
           ls -la
           
           # Create zip archive (wcp.json must be at root)
-          zip -r proton-${{ inputs.proton_version }}.wcp bin/ lib/ share/ wcp.json
+          zip -r proton-${{ env.PROTON_VERSION }}.wcp bin/ lib/ share/ wcp.json
           
           # Move to workspace for artifact upload
-          mv proton-${{ inputs.proton_version }}.wcp ${{ github.workspace }}/
+          mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/
           
           echo "=== WCP archive created ==="
-          ls -lh ${{ github.workspace }}/proton-${{ inputs.proton_version }}.wcp
+          ls -lh ${{ github.workspace }}/proton-${{ env.PROTON_VERSION }}.wcp
 
       - name: Upload WCP as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: proton-${{ inputs.proton_version }}-wcp
-          path: proton-${{ inputs.proton_version }}.wcp
+          name: proton-${{ env.PROTON_VERSION }}-wcp
+          path: proton-${{ env.PROTON_VERSION }}.wcp
           retention-days: 30
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: proton-${{ inputs.proton_version }}
-          name: Proton ${{ inputs.proton_version }} WCP
+          tag_name: ${{ env.TAG_NAME }}
+          name: Proton ${{ env.PROTON_VERSION }} WCP
           body: |
-            # Proton ${{ inputs.proton_version }} WCP Package
+            # Proton ${{ env.PROTON_VERSION }} WCP Package
             
-            Automated build of Proton ${{ inputs.proton_version }} converted to Winlator Custom Package format.
+            Automated build of Proton ${{ env.PROTON_VERSION }} converted to Winlator Custom Package format.
             
             ## Installation
             1. Download the `.wcp` file
             2. Import it into Winlator on your Android device
             
             ## Build Information
-            - **Proton Version**: ${{ inputs.proton_version }}
-            - **Steam App ID**: ${{ inputs.app_id }}
+            - **Proton Version**: ${{ env.PROTON_VERSION }}
+            - **Steam App ID**: ${{ env.APP_ID }}
             - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          files: proton-${{ inputs.proton_version }}.wcp
+          files: proton-${{ env.PROTON_VERSION }}.wcp
           draft: false
           prerelease: false
         env:
