@@ -39,6 +39,7 @@ WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
 WCP_FILENAME="${WCP_FILENAME:-proton-${PROTON_VERSION}.wcp}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
+FILES_SEARCH_MAX_DEPTH=4
 
 if [[ "$WCP_FILENAME" != *.wcp ]]; then
   WCP_FILENAME="${WCP_FILENAME}.wcp"
@@ -83,7 +84,7 @@ app_update_args+=("validate")
 
 proton_root="$download_dir"
 if [[ ! -d "$proton_root/files" ]]; then
-  files_dir="$(find "$download_dir" -maxdepth 4 -type d -name files | head -n 1)"
+  files_dir="$(find "$download_dir" -maxdepth "$FILES_SEARCH_MAX_DEPTH" -type d -name files | head -n 1)"
   if [[ -z "$files_dir" ]]; then
     echo "Unable to locate Proton files directory in $download_dir" >&2
     exit 1

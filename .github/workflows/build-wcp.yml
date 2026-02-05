@@ -33,7 +33,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y steamcmd zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y steamcmd zip
+          apt-cache policy steamcmd
 
       - name: Resolve versions
         id: vars
