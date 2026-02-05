@@ -23,3 +23,7 @@ tags like `proton-10.0`. Configure the following repository secrets:
 - `STEAM_USERNAME`
 - `STEAM_PASSWORD`
 - `STEAM_GUARD_CODE` (optional)
+
+The workflow installs `steamcmd` from the Ubuntu repositories and logs the
+package version via `apt-cache policy` so you can pin the runner image if a
+specific version is required.
