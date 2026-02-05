@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       proton_version:
-        description: Proton version label (e.g., 10.0)
-        required: true
-        default: "10.0"
+        description: Proton version label (leave blank for latest)
+        required: false
+        default: "latest"
       wcp_version:
         description: wcp.json version string
-        required: true
-        default: "10.0-1"
+        required: false
+        default: ""
       proton_branch:
         description: Optional Steam beta branch
         required: false
@@ -47,31 +47,54 @@ jobs:
             proton_version="${{ inputs.proton_version }}"
             wcp_version="${{ inputs.wcp_version }}"
             proton_branch="${{ inputs.proton_branch }}"
+            if [[ -z "$proton_version" ]]; then
+              proton_version="latest"
+            fi
+            tag_name=""
           else
             tag="${GITHUB_REF_NAME}"
             proton_version="${tag#proton-}"
             wcp_version="$proton_version"
             proton_branch=""
+            tag_name="$tag"
           fi
 
           echo "proton_version=$proton_version" >> "$GITHUB_OUTPUT"
           echo "wcp_version=$wcp_version" >> "$GITHUB_OUTPUT"
           echo "proton_branch=$proton_branch" >> "$GITHUB_OUTPUT"
-          echo "tag_name=proton-$proton_version" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
 
       - name: Build WCP package
         env:
           PROTON_VERSION: ${{ steps.vars.outputs.proton_version }}
           WCP_VERSION: ${{ steps.vars.outputs.wcp_version }}
           PROTON_BRANCH: ${{ steps.vars.outputs.proton_branch }}
+          METADATA_PATH: ${{ github.workspace }}/work/metadata.env
         run: |
           chmod +x scripts/build_wcp.sh
           ./scripts/build_wcp.sh
 
+      - name: Capture build metadata
+        id: meta
+        run: |
+          resolved_version="${{ steps.vars.outputs.proton_version }}"
+          if [[ -f "work/metadata.env" ]]; then
+            set -a
+            source "work/metadata.env"
+            set +a
+            resolved_version="$PROTON_VERSION"
+          fi
+          tag_name="${{ steps.vars.outputs.tag_name }}"
+          if [[ -z "$tag_name" ]]; then
+            tag_name="proton-$resolved_version"
+          fi
+          echo "proton_version=$resolved_version" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+
       - name: Publish release asset
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
-          name: Proton ${{ steps.vars.outputs.proton_version }}
+          tag_name: ${{ steps.meta.outputs.tag_name }}
+          name: Proton ${{ steps.meta.outputs.proton_version }}
           files: dist/*.wcp
           target_commitish: ${{ github.sha }}

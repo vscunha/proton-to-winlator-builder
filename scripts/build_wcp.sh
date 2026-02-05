@@ -9,7 +9,7 @@ Environment variables:
   STEAM_USERNAME       Steam account username (required)
   STEAM_PASSWORD       Steam account password (required)
   STEAM_GUARD_CODE     Optional Steam Guard/TOTP code
-  PROTON_VERSION       Proton version label (default: 10.0)
+  PROTON_VERSION       Proton version label (default: latest)
   WCP_VERSION          Version string for wcp.json (default: PROTON_VERSION)
   PROTON_NAME          Display name in wcp.json (default: "Proton <version>")
   WINE_VERSION         wine_version in wcp.json (default: "proton-<version>")
@@ -21,6 +21,7 @@ Environment variables:
   WCP_FILENAME         Output filename (default: proton-<version>.wcp)
   STEAMCMD_BIN         SteamCMD binary (default: steamcmd)
   FILES_SEARCH_MAX_DEPTH  Max depth when locating Proton files/ (default: 4)
+  METADATA_PATH        Optional metadata output path (default: <work>/metadata.env)
 EOF
 }
 
@@ -29,22 +30,19 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   exit 0
 fi
 
-PROTON_VERSION="${PROTON_VERSION:-10.0}"
-WCP_VERSION="${WCP_VERSION:-$PROTON_VERSION}"
-PROTON_NAME="${PROTON_NAME:-Proton $PROTON_VERSION}"
-WINE_VERSION="${WINE_VERSION:-proton-$PROTON_VERSION}"
+PROTON_VERSION_INPUT="${PROTON_VERSION:-}"
+WCP_VERSION_INPUT="${WCP_VERSION:-}"
+PROTON_NAME_INPUT="${PROTON_NAME:-}"
+WINE_VERSION_INPUT="${WINE_VERSION:-}"
+WCP_FILENAME_INPUT="${WCP_FILENAME:-}"
 PROTON_BRANCH="${PROTON_BRANCH:-}"
 PROTON_APP_ID="${PROTON_APP_ID:-1493710}"
 WCP_DESCRIPTION="${WCP_DESCRIPTION:-Valve Proton compatibility layer converted for Winlator}"
 WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
-WCP_FILENAME="${WCP_FILENAME:-proton-${PROTON_VERSION}.wcp}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
 FILES_SEARCH_MAX_DEPTH="${FILES_SEARCH_MAX_DEPTH:-4}"
-
-if [[ "$WCP_FILENAME" != *.wcp ]]; then
-  WCP_FILENAME="${WCP_FILENAME}.wcp"
-fi
+METADATA_PATH="${METADATA_PATH:-$WORK_DIR/metadata.env}"
 
 : "${STEAM_USERNAME:?STEAM_USERNAME is required}"
 : "${STEAM_PASSWORD:?STEAM_PASSWORD is required}"
@@ -87,6 +85,34 @@ app_update_args+=("validate")
   +force_install_dir "$download_dir" \
   "${app_update_args[@]}" \
   +quit
+
+resolved_version="$PROTON_VERSION_INPUT"
+if [[ -z "$resolved_version" || "$resolved_version" == "latest" ]]; then
+  manifest_path="$(find "$download_dir" -maxdepth 2 -name "appmanifest_${PROTON_APP_ID}.acf" -print -quit)"
+  if [[ -n "$manifest_path" ]]; then
+    resolved_version="$(awk -F'"' '/"buildid"/ {print $4; exit}' "$manifest_path")"
+  fi
+  if [[ -z "$resolved_version" ]]; then
+    resolved_version="$(date -u +%Y%m%d%H%M)"
+  fi
+fi
+
+PROTON_VERSION="$resolved_version"
+WCP_VERSION="${WCP_VERSION_INPUT:-$PROTON_VERSION}"
+PROTON_NAME="${PROTON_NAME_INPUT:-Proton $PROTON_VERSION}"
+WINE_VERSION="${WINE_VERSION_INPUT:-proton-$PROTON_VERSION}"
+WCP_FILENAME="${WCP_FILENAME_INPUT:-proton-${PROTON_VERSION}.wcp}"
+
+if [[ "$WCP_FILENAME" != *.wcp ]]; then
+  WCP_FILENAME="${WCP_FILENAME}.wcp"
+fi
+
+mkdir -p "$(dirname "$METADATA_PATH")"
+{
+  printf 'PROTON_VERSION=%q\n' "$PROTON_VERSION"
+  printf 'WCP_VERSION=%q\n' "$WCP_VERSION"
+  printf 'WCP_FILENAME=%q\n' "$WCP_FILENAME"
+} > "$METADATA_PATH"
 
 proton_root="$download_dir"
 if [[ ! -d "$proton_root/files" ]]; then
