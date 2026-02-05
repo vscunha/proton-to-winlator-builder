@@ -87,6 +87,7 @@ app_update_args+=("validate")
   +quit
 
 version_input="$PROTON_VERSION_INPUT"
+# Empty or "latest" triggers automatic build ID detection.
 if [[ -z "$version_input" || "$version_input" == "latest" ]]; then
   manifest_path="$download_dir/appmanifest_${PROTON_APP_ID}.acf"
   if [[ ! -f "$manifest_path" ]]; then
@@ -94,7 +95,7 @@ if [[ -z "$version_input" || "$version_input" == "latest" ]]; then
   fi
   if [[ -n "$manifest_path" ]]; then
     resolved_version="$(sed -nE 's/^[[:space:]]*"buildid"[[:space:]]+"([0-9]+)".*/\1/p; q' "$manifest_path")"
-    if [[ -z "$resolved_version" ]]; then
+    if [[ -z "$resolved_version" || ! "$resolved_version" =~ ^[0-9]+$ ]]; then
       echo "Found manifest at $manifest_path but could not extract build ID." >&2
       exit 1
     fi
