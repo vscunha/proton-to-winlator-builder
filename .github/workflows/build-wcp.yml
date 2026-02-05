@@ -84,13 +84,13 @@ jobs:
             if resolved_output="$(python3 ./scripts/parse_metadata.py "$metadata_path")"; then
               resolved_version="$resolved_output"
             else
-              echo "::error::Failed to parse metadata from ${metadata_path}." >&2
+              echo "::error::Failed to parse metadata from ${metadata_path}."
               exit 1
             fi
           else
             input_version="${{ steps.vars.outputs.proton_version }}"
             if [[ -z "$input_version" || "$input_version" == "latest" ]]; then
-              echo "::error::Metadata file missing and no explicit Proton version provided." >&2
+              echo "::error::Metadata file missing and no explicit Proton version provided."
               exit 1
             fi
             resolved_version="$input_version"

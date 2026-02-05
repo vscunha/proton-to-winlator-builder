@@ -105,7 +105,7 @@ if [[ -z "$version_input" || "$version_input" == "latest" ]]; then
     exit 1
   fi
 else
-  # Manual version inputs may use non-numeric labels (e.g., 10.0).
+  # Manual version inputs may use non-numeric labels (e.g., stable or experimental-v2).
   resolved_version="$version_input"
 fi
 
