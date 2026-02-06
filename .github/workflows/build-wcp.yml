@@ -193,11 +193,8 @@ jobs:
           
           # Move to workspace for artifact upload
           archive_name="proton-${{ env.PROTON_VERSION }}.wcp"
-          current_path="$(pwd -P)"
-          workspace_path=""
-          if ! workspace_path="$(cd "${{ github.workspace }}" && pwd -P)"; then
-            workspace_path=""
-          fi
+          current_path="$(pwd -P)" || current_path=""
+          workspace_path="$(cd "${{ github.workspace }}" && pwd -P)" || workspace_path=""
           if [ -z "$current_path" ] || [ -z "$workspace_path" ]; then
             echo "Failed to resolve paths: current=$current_path workspace=$workspace_path" >&2
             exit 1
