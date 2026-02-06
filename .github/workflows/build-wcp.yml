@@ -150,6 +150,38 @@ jobs:
           echo "=== Generated wcp.json ==="
           cat ~/wcp_output/wcp.json
 
+      - name: Create prefix pack
+        run: |
+          prefix_source=~/proton_download/files/share/default_pfx
+          prefix_pack=~/wcp_output/prefixPack.txz
+          if [ -d "$prefix_source" ]; then
+            tar -cJf "$prefix_pack" -C "$prefix_source" .
+          else
+            tar -cJf "$prefix_pack" --files-from /dev/null
+          fi
+          echo "=== prefixPack.txz ==="
+          ls -lh "$prefix_pack"
+
+      - name: Generate profile.json manifest
+        run: |
+          cat > ~/wcp_output/profile.json << EOF
+          {
+            "type": "Proton",
+            "versionName": "${{ env.PROTON_VERSION }}",
+            "versionCode": 0,
+            "description": "Valve's Proton compatibility layer converted for Winlator",
+            "files": [],
+            "proton": {
+              "binPath": "bin",
+              "libPath": "lib",
+              "prefixPack": "prefixPack.txz"
+            }
+          }
+          EOF
+          
+          echo "=== Generated profile.json ==="
+          cat ~/wcp_output/profile.json
+
       - name: Create WCP archive
         run: |
           cd ~/wcp_output
@@ -159,7 +191,7 @@ jobs:
           ls -la
           
           # Create zip archive (wcp.json must be at root)
-          zip -r proton-${{ env.PROTON_VERSION }}.wcp bin/ lib/ share/ wcp.json
+          zip -r proton-${{ env.PROTON_VERSION }}.wcp bin/ lib/ share/ wcp.json profile.json prefixPack.txz
           
           # Move to workspace for artifact upload
           mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/

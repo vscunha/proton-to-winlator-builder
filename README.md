@@ -11,7 +11,8 @@ export STEAM_PASSWORD=your_pass
 ```
 
 The script downloads Proton via SteamCMD, restructures the `files/` tree into the
-Winlator layout, and writes the `.wcp` archive to `./dist`.
+Winlator layout, generates `wcp.json`, `profile.json`, and `prefixPack.txz`, and
+writes the `.wcp` archive to `./dist`.
 
 If `PROTON_VERSION` is omitted or set to `latest`, the script uses the most
 recent Steam build ID as the version. Set `PROTON_VERSION` to a specific release
