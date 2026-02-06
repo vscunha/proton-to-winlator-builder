@@ -61,8 +61,8 @@ if ! command -v "$STEAMCMD_BIN" >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v zip >/dev/null 2>&1; then
-  echo "zip is required to package the .wcp archive" >&2
+if ! command -v xz >/dev/null 2>&1; then
+  echo "xz is required to package the .wcp archive" >&2
   exit 1
 fi
 
@@ -259,9 +259,6 @@ PY
 
 wcp_path="$OUTPUT_DIR/$WCP_FILENAME"
 rm -f "$wcp_path"
-(
-  cd "$stage_dir"
-  zip -r -9 -X "$wcp_path" .
-)
+tar -cJf "$wcp_path" -C "$stage_dir" .
 
 echo "WCP package created at $wcp_path"
