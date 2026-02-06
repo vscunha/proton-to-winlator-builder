@@ -192,7 +192,18 @@ jobs:
           tar -cJf proton-${{ env.PROTON_VERSION }}.wcp -C ~/wcp_output .
           
           # Move to workspace for artifact upload
-          mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/
+          archive_name="proton-${{ env.PROTON_VERSION }}.wcp"
+          current_path="$(pwd -P)" || current_path=""
+          workspace_path="$(cd "${{ github.workspace }}" && pwd -P)" || workspace_path=""
+          if [ -z "$current_path" ] || [ -z "$workspace_path" ]; then
+            echo "Failed to resolve paths: current=$current_path workspace=$workspace_path" >&2
+            exit 1
+          elif [ ! -f "$archive_name" ]; then
+            echo "WCP archive not found at $archive_name" >&2
+            exit 1
+          elif [ "$current_path" != "$workspace_path" ]; then
+            mv "$archive_name" "${{ github.workspace }}/"
+          fi
           
           echo "=== WCP archive created ==="
           ls -lh ${{ github.workspace }}/proton-${{ env.PROTON_VERSION }}.wcp
