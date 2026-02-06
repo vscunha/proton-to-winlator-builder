@@ -10,12 +10,16 @@ Environment variables:
   STEAM_PASSWORD       Steam account password (required)
   STEAM_GUARD_CODE     Optional Steam Guard/TOTP code
   PROTON_VERSION       Proton version label (default: latest)
-  WCP_VERSION          Version string for wcp.json (default: PROTON_VERSION)
+  WCP_VERSION          Version string for wcp.json (default: PROTON_VERSION or PROTON_VERSION-1 for X.Y)
   PROTON_NAME          Display name in wcp.json (default: "Proton <version>")
   WINE_VERSION         wine_version in wcp.json (default: "proton-<version>")
   PROTON_BRANCH        Optional Steam beta branch name
   PROTON_APP_ID        Steam app ID (default: 1493710)
   WCP_DESCRIPTION      Description in wcp.json
+  PROFILE_VERSION_NAME Version name in profile.json (default: PROTON_VERSION)
+  PROFILE_VERSION_CODE Version code in profile.json (default: 0)
+  PROFILE_DESCRIPTION  Description in profile.json (default: WCP_DESCRIPTION)
+  PROFILE_PREFIX_PACK  Prefix pack filename in profile.json (default: prefixPack.txz)
   WORK_DIR             Working directory (default: ./work)
   OUTPUT_DIR           Output directory (default: ./dist)
   WCP_FILENAME         Output filename (default: proton-<version>.wcp)
@@ -37,7 +41,12 @@ WINE_VERSION_INPUT="${WINE_VERSION:-}"
 WCP_FILENAME_INPUT="${WCP_FILENAME:-}"
 PROTON_BRANCH="${PROTON_BRANCH:-}"
 PROTON_APP_ID="${PROTON_APP_ID:-1493710}"
-WCP_DESCRIPTION="${WCP_DESCRIPTION:-Valve Proton compatibility layer converted for Winlator}"
+DEFAULT_WCP_DESCRIPTION="Valve's Proton compatibility layer converted for Winlator"
+WCP_DESCRIPTION="${WCP_DESCRIPTION:-$DEFAULT_WCP_DESCRIPTION}"
+PROFILE_VERSION_NAME_INPUT="${PROFILE_VERSION_NAME:-}"
+PROFILE_VERSION_CODE_INPUT="${PROFILE_VERSION_CODE:-}"
+PROFILE_DESCRIPTION_INPUT="${PROFILE_DESCRIPTION:-}"
+PROFILE_PREFIX_PACK="${PROFILE_PREFIX_PACK:-prefixPack.txz}"
 WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
@@ -110,10 +119,27 @@ else
 fi
 
 PROTON_VERSION="$resolved_version"
-WCP_VERSION="${WCP_VERSION_INPUT:-$PROTON_VERSION}"
-PROTON_NAME="${PROTON_NAME_INPUT:-Proton $PROTON_VERSION}"
-WINE_VERSION="${WINE_VERSION_INPUT:-proton-$PROTON_VERSION}"
+if [[ -z "$WCP_VERSION_INPUT" ]]; then
+  if [[ "$PROTON_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    WCP_VERSION="${PROTON_VERSION}-1"
+  else
+    WCP_VERSION="$PROTON_VERSION"
+  fi
+else
+  WCP_VERSION="$WCP_VERSION_INPUT"
+fi
+
+proton_display_version="$PROTON_VERSION"
+if [[ "$proton_display_version" == *-* ]]; then
+  proton_display_version="${proton_display_version%%-*}"
+fi
+
+PROTON_NAME="${PROTON_NAME_INPUT:-Proton $proton_display_version}"
+WINE_VERSION="${WINE_VERSION_INPUT:-proton-$proton_display_version}"
 WCP_FILENAME="${WCP_FILENAME_INPUT:-proton-${PROTON_VERSION}.wcp}"
+PROFILE_VERSION_NAME="${PROFILE_VERSION_NAME_INPUT:-$PROTON_VERSION}"
+PROFILE_VERSION_CODE="${PROFILE_VERSION_CODE_INPUT:-0}"
+PROFILE_DESCRIPTION="${PROFILE_DESCRIPTION_INPUT:-$WCP_DESCRIPTION}"
 
 if [[ "$WCP_FILENAME" != *.wcp ]]; then
   WCP_FILENAME="${WCP_FILENAME}.wcp"
@@ -155,7 +181,27 @@ if [[ ! -d "$files_dir" ]]; then
   exit 1
 fi
 
-cp -a "$files_dir/." "$stage_dir/"
+mkdir -p "$stage_dir/bin" "$stage_dir/lib" "$stage_dir/share"
+if [[ -d "$files_dir/bin" ]]; then
+  cp -a "$files_dir/bin/." "$stage_dir/bin/"
+fi
+if [[ -d "$files_dir/lib" ]]; then
+  cp -a "$files_dir/lib/." "$stage_dir/lib/"
+fi
+if [[ -d "$files_dir/lib64" ]]; then
+  cp -a "$files_dir/lib64/." "$stage_dir/lib/"
+fi
+if [[ -d "$files_dir/share" ]]; then
+  cp -a "$files_dir/share/." "$stage_dir/share/"
+fi
+
+prefix_source="$files_dir/share/default_pfx"
+prefix_pack_path="$stage_dir/$PROFILE_PREFIX_PACK"
+if [[ -d "$prefix_source" ]]; then
+  tar -cJf "$prefix_pack_path" -C "$prefix_source" .
+else
+  tar -cJf "$prefix_pack_path" --files-from /dev/null
+fi
 
 WCP_JSON_PATH="$stage_dir/wcp.json" \
 PROTON_NAME="$PROTON_NAME" \
@@ -175,6 +221,39 @@ data = {
 }
 
 path = Path(os.environ["WCP_JSON_PATH"])
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+
+PROFILE_JSON_PATH="$stage_dir/profile.json" \
+PROFILE_VERSION_NAME="$PROFILE_VERSION_NAME" \
+PROFILE_VERSION_CODE="$PROFILE_VERSION_CODE" \
+PROFILE_DESCRIPTION="$PROFILE_DESCRIPTION" \
+PROFILE_PREFIX_PACK="$PROFILE_PREFIX_PACK" \
+python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+version_code_raw = os.environ["PROFILE_VERSION_CODE"]
+try:
+    version_code = int(version_code_raw)
+except ValueError:
+    version_code = 0
+
+data = {
+    "type": "Proton",
+    "versionName": os.environ["PROFILE_VERSION_NAME"],
+    "versionCode": version_code,
+    "description": os.environ["PROFILE_DESCRIPTION"],
+    "files": [],
+    "proton": {
+        "binPath": "bin",
+        "libPath": "lib",
+        "prefixPack": os.environ["PROFILE_PREFIX_PACK"],
+    },
+}
+
+path = Path(os.environ["PROFILE_JSON_PATH"])
 path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
 
