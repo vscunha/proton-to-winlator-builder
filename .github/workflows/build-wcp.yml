@@ -196,6 +196,7 @@ jobs:
           workspace_path="$(cd "${{ github.workspace }}" && pwd -P)"
           if [ -z "$current_path" ] || [ -z "$workspace_path" ]; then
             echo "Unable to resolve workspace paths for archive move." >&2
+            exit 1
           elif [ "$current_path" != "$workspace_path" ]; then
             mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/
           fi
