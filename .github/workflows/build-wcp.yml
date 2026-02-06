@@ -202,7 +202,7 @@ jobs:
             echo "WCP archive not found at $archive_name" >&2
             exit 1
           elif [ "$current_path" != "$workspace_path" ]; then
-            mv "$archive_name" ${{ github.workspace }}/
+            mv "$archive_name" "${{ github.workspace }}/"
           fi
           
           echo "=== WCP archive created ==="
