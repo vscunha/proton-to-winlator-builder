@@ -10,7 +10,7 @@ Environment variables:
   STEAM_PASSWORD       Steam account password (required)
   STEAM_GUARD_CODE     Optional Steam Guard/TOTP code
   PROTON_VERSION       Proton version label (default: latest)
-  WCP_VERSION          Version string for wcp.json (default: PROTON_VERSION)
+  WCP_VERSION          Version string for wcp.json (default: PROTON_VERSION or PROTON_VERSION-1 for X.Y)
   PROTON_NAME          Display name in wcp.json (default: "Proton <version>")
   WINE_VERSION         wine_version in wcp.json (default: "proton-<version>")
   PROTON_BRANCH        Optional Steam beta branch name
@@ -37,7 +37,7 @@ WINE_VERSION_INPUT="${WINE_VERSION:-}"
 WCP_FILENAME_INPUT="${WCP_FILENAME:-}"
 PROTON_BRANCH="${PROTON_BRANCH:-}"
 PROTON_APP_ID="${PROTON_APP_ID:-1493710}"
-WCP_DESCRIPTION="${WCP_DESCRIPTION:-Valve Proton compatibility layer converted for Winlator}"
+WCP_DESCRIPTION="${WCP_DESCRIPTION:-Valve's Proton compatibility layer converted for Winlator}"
 WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
@@ -110,9 +110,23 @@ else
 fi
 
 PROTON_VERSION="$resolved_version"
-WCP_VERSION="${WCP_VERSION_INPUT:-$PROTON_VERSION}"
-PROTON_NAME="${PROTON_NAME_INPUT:-Proton $PROTON_VERSION}"
-WINE_VERSION="${WINE_VERSION_INPUT:-proton-$PROTON_VERSION}"
+if [[ -z "$WCP_VERSION_INPUT" ]]; then
+  if [[ "$PROTON_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    WCP_VERSION="${PROTON_VERSION}-1"
+  else
+    WCP_VERSION="$PROTON_VERSION"
+  fi
+else
+  WCP_VERSION="$WCP_VERSION_INPUT"
+fi
+
+proton_display_version="$PROTON_VERSION"
+if [[ "$proton_display_version" == *-* ]]; then
+  proton_display_version="${proton_display_version%%-*}"
+fi
+
+PROTON_NAME="${PROTON_NAME_INPUT:-Proton $proton_display_version}"
+WINE_VERSION="${WINE_VERSION_INPUT:-proton-$proton_display_version}"
 WCP_FILENAME="${WCP_FILENAME_INPUT:-proton-${PROTON_VERSION}.wcp}"
 
 if [[ "$WCP_FILENAME" != *.wcp ]]; then
@@ -155,7 +169,19 @@ if [[ ! -d "$files_dir" ]]; then
   exit 1
 fi
 
-cp -a "$files_dir/." "$stage_dir/"
+mkdir -p "$stage_dir/bin" "$stage_dir/lib" "$stage_dir/share"
+if [[ -d "$files_dir/bin" ]]; then
+  cp -a "$files_dir/bin/." "$stage_dir/bin/"
+fi
+if [[ -d "$files_dir/lib" ]]; then
+  cp -a "$files_dir/lib/." "$stage_dir/lib/"
+fi
+if [[ -d "$files_dir/lib64" ]]; then
+  cp -a "$files_dir/lib64/." "$stage_dir/lib/"
+fi
+if [[ -d "$files_dir/share" ]]; then
+  cp -a "$files_dir/share/." "$stage_dir/share/"
+fi
 
 WCP_JSON_PATH="$stage_dir/wcp.json" \
 PROTON_NAME="$PROTON_NAME" \

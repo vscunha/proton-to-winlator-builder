@@ -40,7 +40,15 @@ jobs:
           else
             tag_name="proton-$version"
           fi
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            wcp_version="${version}-1"
+          else
+            wcp_version="$version"
+          fi
+          display_version="${version%%-*}"
           echo "PROTON_VERSION=$version" >> "$GITHUB_ENV"
+          echo "PROTON_DISPLAY_VERSION=$display_version" >> "$GITHUB_ENV"
+          echo "WCP_VERSION=$wcp_version" >> "$GITHUB_ENV"
           echo "TAG_NAME=$tag_name" >> "$GITHUB_ENV"
 
       - name: Install dependencies
@@ -132,11 +140,10 @@ jobs:
         run: |
           cat > ~/wcp_output/wcp.json << EOF
           {
-            "name": "Proton ${{ env.PROTON_VERSION }}",
-            "version": "${{ env.PROTON_VERSION }}",
-            "description": "Proton compatibility layer for Winlator",
-            "author": "Valve Software (repackaged)",
-            "wine_version": "wine-${{ env.PROTON_VERSION }}"
+            "name": "Proton ${{ env.PROTON_DISPLAY_VERSION }}",
+            "version": "${{ env.WCP_VERSION }}",
+            "description": "Valve's Proton compatibility layer converted for Winlator",
+            "wine_version": "proton-${{ env.PROTON_DISPLAY_VERSION }}"
           }
           EOF
           
