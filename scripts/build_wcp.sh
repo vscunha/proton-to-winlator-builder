@@ -62,7 +62,12 @@ if ! command -v "$STEAMCMD_BIN" >/dev/null 2>&1; then
 fi
 
 if ! command -v xz >/dev/null 2>&1; then
-  echo "xz is required to package the .wcp archive" >&2
+  echo "xz is required to build prefixPack.txz" >&2
+  exit 1
+fi
+
+if ! command -v zstd >/dev/null 2>&1; then
+  echo "zstd is required to package the .wcp archive" >&2
   exit 1
 fi
 
@@ -259,6 +264,6 @@ PY
 
 wcp_path="$OUTPUT_DIR/$WCP_FILENAME"
 rm -f "$wcp_path"
-tar -cJf "$wcp_path" -C "$stage_dir" .
+tar --zstd -cf "$wcp_path" -C "$stage_dir" .
 
 echo "WCP package created at $wcp_path"

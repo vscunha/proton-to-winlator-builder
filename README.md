@@ -18,7 +18,7 @@ If `PROTON_VERSION` is omitted or set to `latest`, the script uses the most
 recent Steam build ID as the version. Set `PROTON_VERSION` to a specific release
 when needed.
 
-Local runs expect `steamcmd`, `xz`, and `python3` to be available.
+Local runs expect `steamcmd`, `xz`, `zstd`, and `python3` to be available.
 
 ## GitHub Actions
 
