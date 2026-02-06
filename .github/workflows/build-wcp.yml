@@ -194,7 +194,7 @@ jobs:
           # Move to workspace for artifact upload
           current_path="$(pwd -P)"
           workspace_path="$(cd "${{ github.workspace }}" && pwd -P)"
-          if [ -n "$workspace_path" ] && [ "$current_path" != "$workspace_path" ]; then
+          if [ -n "$current_path" ] && [ -n "$workspace_path" ] && [ "$current_path" != "$workspace_path" ]; then
             mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/
           fi
           
