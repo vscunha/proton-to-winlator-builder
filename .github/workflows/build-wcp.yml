@@ -54,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget lib32gcc-s1 zip
+          sudo apt-get install -y wget lib32gcc-s1 xz-utils
 
       - name: Download and install SteamCMD
         run: |
@@ -184,14 +184,12 @@ jobs:
 
       - name: Create WCP archive
         run: |
-          cd ~/wcp_output
-          
-          # Verify structure before zipping
+          # Verify structure before archiving
           echo "=== Files to be included in WCP ==="
-          ls -la
+          ls -la ~/wcp_output
           
-          # Create zip archive (wcp.json must be at root)
-          zip -r proton-${{ env.PROTON_VERSION }}.wcp bin/ lib/ share/ wcp.json profile.json prefixPack.txz
+          # Create tar.xz archive (wcp.json must be at root)
+          tar -cJf proton-${{ env.PROTON_VERSION }}.wcp -C ~/wcp_output .
           
           # Move to workspace for artifact upload
           mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/
