@@ -192,7 +192,7 @@ jobs:
           tar -cJf proton-${{ env.PROTON_VERSION }}.wcp -C ~/wcp_output .
           
           # Move to workspace for artifact upload
-          if [ "$(pwd)" != "${{ github.workspace }}" ]; then
+          if [ "$(realpath "$(pwd)")" != "$(realpath "${{ github.workspace }}")" ]; then
             mv proton-${{ env.PROTON_VERSION }}.wcp ${{ github.workspace }}/
           fi
           
