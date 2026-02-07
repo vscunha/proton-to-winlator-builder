@@ -16,10 +16,11 @@ Environment variables:
   PROTON_BRANCH        Optional Steam beta branch name
   PROTON_APP_ID        Steam app ID (default: 1493710)
   WCP_DESCRIPTION      Description in wcp.json
-  PROFILE_VERSION_NAME Version name in profile.json (default: PROTON_VERSION)
+  PROFILE_VERSION_NAME Version name in profile.json (default: PROTON_VERSION-x86_64)
   PROFILE_VERSION_CODE Version code in profile.json (default: 0)
   PROFILE_DESCRIPTION  Description in profile.json (default: WCP_DESCRIPTION)
   PROFILE_PREFIX_PACK  Prefix pack filename in profile.json (default: prefixPack.txz)
+  PROFILE_ARCH         Architecture suffix for profile.json versionName (default: x86_64)
   WORK_DIR             Working directory (default: ./work)
   OUTPUT_DIR           Output directory (default: ./dist)
   WCP_FILENAME         Output filename (default: proton-<version>.wcp)
@@ -47,6 +48,7 @@ PROFILE_VERSION_NAME_INPUT="${PROFILE_VERSION_NAME:-}"
 PROFILE_VERSION_CODE_INPUT="${PROFILE_VERSION_CODE:-}"
 PROFILE_DESCRIPTION_INPUT="${PROFILE_DESCRIPTION:-}"
 PROFILE_PREFIX_PACK="${PROFILE_PREFIX_PACK:-prefixPack.txz}"
+PROFILE_ARCH="${PROFILE_ARCH:-x86_64}"
 WORK_DIR="${WORK_DIR:-$(pwd)/work}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(pwd)/dist}"
 STEAMCMD_BIN="${STEAMCMD_BIN:-steamcmd}"
@@ -142,7 +144,7 @@ fi
 PROTON_NAME="${PROTON_NAME_INPUT:-Proton $proton_display_version}"
 WINE_VERSION="${WINE_VERSION_INPUT:-proton-$proton_display_version}"
 WCP_FILENAME="${WCP_FILENAME_INPUT:-proton-${PROTON_VERSION}.wcp}"
-PROFILE_VERSION_NAME="${PROFILE_VERSION_NAME_INPUT:-$PROTON_VERSION}"
+PROFILE_VERSION_NAME="${PROFILE_VERSION_NAME_INPUT:-$PROTON_VERSION-$PROFILE_ARCH}"
 PROFILE_VERSION_CODE="${PROFILE_VERSION_CODE_INPUT:-0}"
 PROFILE_DESCRIPTION="${PROFILE_DESCRIPTION_INPUT:-$WCP_DESCRIPTION}"
 
