@@ -412,6 +412,44 @@ class WCPValidator:
             except Exception as e:
                 self.warnings.append(f"Could not parse wcp.json: {e}")
         
+        # Check for critical Wine binaries in bin/
+        bin_dir = Path(self.temp_dir) / 'bin'
+        if bin_dir.exists():
+            critical_binaries = ['wine', 'wine64', 'wineserver']
+            found_binaries = []
+            for binary in critical_binaries:
+                if (bin_dir / binary).exists():
+                    found_binaries.append(binary)
+            
+            if found_binaries:
+                print(f"  ✓ Found Wine binaries: {', '.join(found_binaries)}")
+            else:
+                self.warnings.append(
+                    f"No critical Wine binaries found in bin/ "
+                    f"(expected at least one of: {', '.join(critical_binaries)})"
+                )
+        
+        # Check for Wine libraries in lib/
+        lib_dir = Path(self.temp_dir) / 'lib'
+        if lib_dir.exists():
+            wine_subdirs = ['wine', 'wine64']
+            found_wine_libs = False
+            for subdir in wine_subdirs:
+                wine_lib_dir = lib_dir / subdir
+                if wine_lib_dir.exists() and wine_lib_dir.is_dir():
+                    # Check if it has any files
+                    lib_files = list(wine_lib_dir.iterdir())
+                    if lib_files:
+                        found_wine_libs = True
+                        print(f"  ✓ Found Wine libraries in lib/{subdir}/ ({len(lib_files)} items)")
+                        break
+            
+            if not found_wine_libs:
+                self.warnings.append(
+                    "No Wine library directories found in lib/ "
+                    "(expected lib/wine/ or lib/wine64/)"
+                )
+        
         return len(self.errors) == 0
     
     def print_results(self):
