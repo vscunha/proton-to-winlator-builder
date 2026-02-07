@@ -46,8 +46,20 @@ jobs:
             wcp_version="$version"
           fi
           display_version="${version%%-*}"
+          
+          # Extract numeric-only version for profile versionName to match WineInfo regex
+          # WineInfo regex: ^(wine|proton|Proton)\-([0-9\.]+)\-?([0-9\.]+)?\-(x86|x86_64|arm64ec)$
+          # Strip any non-numeric suffixes (e.g., "10.0-rc1" -> "10.0")
+          numeric_version="$version"
+          if [[ ! "$numeric_version" =~ ^([0-9.]+)-([0-9]+)$ ]] && [[ "$numeric_version" =~ ^([0-9.]+)(-.+)?$ ]]; then
+            # Strip non-numeric suffix: "10.0-rc1" -> "10.0"
+            # Numeric subversions like "10.0-1" are preserved by the first regex check
+            numeric_version="${BASH_REMATCH[1]}"
+          fi
+          
           echo "PROTON_VERSION=$version" >> "$GITHUB_ENV"
           echo "PROTON_DISPLAY_VERSION=$display_version" >> "$GITHUB_ENV"
+          echo "PROTON_NUMERIC_VERSION=$numeric_version" >> "$GITHUB_ENV"
           echo "WCP_VERSION=$wcp_version" >> "$GITHUB_ENV"
           echo "TAG_NAME=$tag_name" >> "$GITHUB_ENV"
 
@@ -167,7 +179,7 @@ jobs:
           cat > ~/wcp_output/profile.json << EOF
           {
             "type": "Proton",
-            "versionName": "${{ env.PROTON_VERSION }}-x86_64",
+            "versionName": "${{ env.PROTON_NUMERIC_VERSION }}-x86_64",
             "versionCode": 0,
             "description": "Valve's Proton compatibility layer converted for Winlator",
             "files": [],
@@ -207,6 +219,13 @@ jobs:
           
           echo "=== WCP archive created ==="
           ls -lh ${{ github.workspace }}/proton-${{ env.PROTON_VERSION }}.wcp
+
+      - name: Validate WCP with Integration Test
+        run: |
+          python3 scripts/test_wcp_integration.py proton-${{ env.PROTON_VERSION }}.wcp || {
+            echo "✗ WCP validation failed"
+            exit 1
+          }
 
       - name: Upload WCP as artifact
         uses: actions/upload-artifact@v4

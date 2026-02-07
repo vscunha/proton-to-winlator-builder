@@ -20,6 +20,23 @@ when needed.
 
 Local runs expect `steamcmd`, `xz`, `zstd`, and `python3` to be available.
 
+## Integration Testing
+
+The project includes a Winlator integration test (`scripts/test_wcp_integration.py`) that validates WCP packages against the coffincolors/winlator container startup requirements. This test simulates how Winlator loads and validates WCP files:
+
+```bash
+python3 scripts/test_wcp_integration.py <wcp_file>
+```
+
+The test validates:
+- WCP archive format and extraction
+- `profile.json` structure matches ContentProfile requirements
+- Wine/Proton identifier format matches WineInfo regex pattern
+- Required directories and files exist (bin/, lib/, prefixPack.txz)
+- prefixPack.txz has correct .wine/ prefix structure
+
+This test runs automatically in the GitHub Actions workflow as the final validation step before releasing the WCP package.
+
 ## GitHub Actions
 
 The workflow `.github/workflows/build-wcp.yml` can be triggered manually (defaults

@@ -141,10 +141,23 @@ if [[ "$proton_display_version" == *-* ]]; then
   proton_display_version="${proton_display_version%%-*}"
 fi
 
+# Extract numeric-only version for profile versionName to match WineInfo regex
+# WineInfo regex: ^(wine|proton|Proton)\-([0-9\.]+)\-?([0-9\.]+)?\-(x86|x86_64|arm64ec)$
+# This regex only accepts numeric versions and subversions, so we need to strip
+# any non-numeric suffixes (e.g., "10.0-rc1" -> "10.0")
+proton_numeric_version="$PROTON_VERSION"
+# Remove any suffix starting with a non-numeric character after a dash
+# Examples: "10.0-rc1" -> "10.0", "10.0-1" -> "10.0-1", "10.0.15223" -> "10.0.15223"
+if [[ ! "$proton_numeric_version" =~ ^([0-9.]+)-([0-9]+)$ ]] && [[ "$proton_numeric_version" =~ ^([0-9.]+)(-.+)?$ ]]; then
+  # Strip non-numeric suffix: "10.0-rc1" -> "10.0"
+  # Numeric subversions like "10.0-1" are preserved by the first regex check
+  proton_numeric_version="${BASH_REMATCH[1]}"
+fi
+
 PROTON_NAME="${PROTON_NAME_INPUT:-Proton $proton_display_version}"
 WINE_VERSION="${WINE_VERSION_INPUT:-proton-$proton_display_version}"
 WCP_FILENAME="${WCP_FILENAME_INPUT:-proton-${PROTON_VERSION}.wcp}"
-PROFILE_VERSION_NAME="${PROFILE_VERSION_NAME_INPUT:-$PROTON_VERSION-$PROFILE_ARCH}"
+PROFILE_VERSION_NAME="${PROFILE_VERSION_NAME_INPUT:-$proton_numeric_version-$PROFILE_ARCH}"
 PROFILE_VERSION_CODE="${PROFILE_VERSION_CODE_INPUT:-0}"
 PROFILE_DESCRIPTION="${PROFILE_DESCRIPTION_INPUT:-$WCP_DESCRIPTION}"
 
