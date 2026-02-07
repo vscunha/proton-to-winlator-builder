@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Tuple
 class WineInfoValidator:
     """
     Validates Wine/Proton identifiers based on WineInfo.java regex pattern.
-    Pattern: ^(wine|proton|Proton)\-([0-9\.]+)\-?([0-9\.]+)?\-(x86|x86_64|arm64ec)$
+    Pattern: ^(wine|proton|Proton)\\-([0-9\\.]+)\\-?([0-9\\.]+)?\\-(x86|x86_64|arm64ec)$
     """
     
     PATTERN = re.compile(r'^(wine|proton|Proton)\-([0-9\.]+)\-?([0-9\.]+)?\-(x86|x86_64|arm64ec)$')
