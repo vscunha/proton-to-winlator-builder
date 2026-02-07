@@ -155,7 +155,7 @@ jobs:
           prefix_source=~/proton_download/files/share/default_pfx
           prefix_pack=~/wcp_output/prefixPack.txz
           if [ -d "$prefix_source" ]; then
-            tar -cJf "$prefix_pack" -C "$prefix_source" .
+            tar -cJf "$prefix_pack" --transform 's,^\./,.wine/,' -C "$prefix_source" .
           else
             tar -cJf "$prefix_pack" --files-from /dev/null
           fi
@@ -166,12 +166,12 @@ jobs:
         run: |
           cat > ~/wcp_output/profile.json << EOF
           {
-            "type": "Proton",
+            "type": "Wine",
             "versionName": "${{ env.PROTON_VERSION }}-x86_64",
             "versionCode": 0,
             "description": "Valve's Proton compatibility layer converted for Winlator",
             "files": [],
-            "proton": {
+            "wine": {
               "binPath": "bin",
               "libPath": "lib",
               "prefixPack": "prefixPack.txz"
