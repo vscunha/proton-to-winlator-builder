@@ -205,7 +205,10 @@ fi
 prefix_source="$files_dir/share/default_pfx"
 prefix_pack_path="$stage_dir/$PROFILE_PREFIX_PACK"
 if [[ -d "$prefix_source" ]]; then
-  tar -cJf "$prefix_pack_path" -C "$prefix_source" .
+  # Winlator expects the prefix pack to extract into a .wine/ subdirectory
+  # inside the container directory. We use --transform to prepend .wine/ to
+  # every path so the archive contents are rooted at .wine/.
+  tar -cJf "$prefix_pack_path" --transform 's,^\./,.wine/,' -C "$prefix_source" .
 else
   tar -cJf "$prefix_pack_path" --files-from /dev/null
 fi
