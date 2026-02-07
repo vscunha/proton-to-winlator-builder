@@ -166,12 +166,12 @@ jobs:
         run: |
           cat > ~/wcp_output/profile.json << EOF
           {
-            "type": "Wine",
+            "type": "Proton",
             "versionName": "${{ env.PROTON_VERSION }}-x86_64",
             "versionCode": 0,
             "description": "Valve's Proton compatibility layer converted for Winlator",
             "files": [],
-            "wine": {
+            "proton": {
               "binPath": "bin",
               "libPath": "lib",
               "prefixPack": "prefixPack.txz"

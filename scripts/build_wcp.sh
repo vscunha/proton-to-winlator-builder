@@ -251,12 +251,12 @@ except ValueError:
     version_code = 0
 
 data = {
-    "type": "Wine",
+    "type": "Proton",
     "versionName": os.environ["PROFILE_VERSION_NAME"],
     "versionCode": version_code,
     "description": os.environ["PROFILE_DESCRIPTION"],
     "files": [],
-    "wine": {
+    "proton": {
         "binPath": "bin",
         "libPath": "lib",
         "prefixPack": os.environ["PROFILE_PREFIX_PACK"],
