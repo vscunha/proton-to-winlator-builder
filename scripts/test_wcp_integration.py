@@ -51,13 +51,16 @@ class WineInfoValidator:
         """
         Construct a WineInfo identifier from type and versionName.
         This mimics how Winlator resolves identifiers from profile.json.
+        Note: Type is normalized to lowercase as per WineInfo.fromIdentifier behavior.
         """
+        type_lower = type_name.lower()
+        
         # If versionName already includes the type prefix, use it directly
-        if version_name.startswith(f"{type_name.lower()}-"):
+        if version_name.startswith(f"{type_lower}-"):
             return version_name
         
-        # Otherwise, prepend the type
-        return f"{type_name.lower()}-{version_name}"
+        # Otherwise, prepend the type (lowercased)
+        return f"{type_lower}-{version_name}"
 
 
 class ContentProfileValidator:
@@ -358,9 +361,18 @@ class WCPValidator:
                 missing_prefix = []
                 
                 for member in members:
-                    if member.name.startswith('.wine/'):
+                    # Normalize paths - remove leading './' if present
+                    normalized_name = member.name
+                    if normalized_name.startswith('./'):
+                        normalized_name = normalized_name[2:]
+                    
+                    # Skip the root directory marker
+                    if normalized_name == '' or normalized_name == '.':
+                        continue
+                    
+                    if normalized_name.startswith('.wine/'):
                         has_wine_prefix = True
-                    elif member.name != '.' and not member.name.startswith('./'):
+                    else:
                         missing_prefix.append(member.name)
                 
                 if not has_wine_prefix and missing_prefix:

@@ -210,15 +210,10 @@ jobs:
 
       - name: Validate WCP with Integration Test
         run: |
-          echo "=== Running Winlator Integration Test ==="
-          python3 scripts/test_wcp_integration.py proton-${{ env.PROTON_VERSION }}.wcp
-          
-          if [ $? -eq 0 ]; then
-            echo "✓ WCP validation passed"
-          else
+          python3 scripts/test_wcp_integration.py proton-${{ env.PROTON_VERSION }}.wcp || {
             echo "✗ WCP validation failed"
             exit 1
-          fi
+          }
 
       - name: Upload WCP as artifact
         uses: actions/upload-artifact@v4
