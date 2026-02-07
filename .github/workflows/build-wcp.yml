@@ -51,11 +51,9 @@ jobs:
           # WineInfo regex: ^(wine|proton|Proton)\-([0-9\.]+)\-?([0-9\.]+)?\-(x86|x86_64|arm64ec)$
           # Strip any non-numeric suffixes (e.g., "10.0-rc1" -> "10.0")
           numeric_version="$version"
-          if [[ "$numeric_version" =~ ^([0-9.]+)-([0-9]+)$ ]]; then
-            # Keep numeric subversion: "10.0-1" stays "10.0-1"
-            numeric_version="$numeric_version"
-          elif [[ "$numeric_version" =~ ^([0-9.]+)(-.+)?$ ]]; then
+          if [[ ! "$numeric_version" =~ ^([0-9.]+)-([0-9]+)$ ]] && [[ "$numeric_version" =~ ^([0-9.]+)(-.+)?$ ]]; then
             # Strip non-numeric suffix: "10.0-rc1" -> "10.0"
+            # Numeric subversions like "10.0-1" are preserved by the first regex check
             numeric_version="${BASH_REMATCH[1]}"
           fi
           

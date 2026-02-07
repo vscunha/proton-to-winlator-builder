@@ -148,11 +148,9 @@ fi
 proton_numeric_version="$PROTON_VERSION"
 # Remove any suffix starting with a non-numeric character after a dash
 # Examples: "10.0-rc1" -> "10.0", "10.0-1" -> "10.0-1", "10.0.15223" -> "10.0.15223"
-if [[ "$proton_numeric_version" =~ ^([0-9.]+)-([0-9]+)$ ]]; then
-  # Keep numeric subversion: "10.0-1" stays "10.0-1"
-  proton_numeric_version="$proton_numeric_version"
-elif [[ "$proton_numeric_version" =~ ^([0-9.]+)(-.+)?$ ]]; then
+if [[ ! "$proton_numeric_version" =~ ^([0-9.]+)-([0-9]+)$ ]] && [[ "$proton_numeric_version" =~ ^([0-9.]+)(-.+)?$ ]]; then
   # Strip non-numeric suffix: "10.0-rc1" -> "10.0"
+  # Numeric subversions like "10.0-1" are preserved by the first regex check
   proton_numeric_version="${BASH_REMATCH[1]}"
 fi
 
