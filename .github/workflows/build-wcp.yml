@@ -167,7 +167,7 @@ jobs:
           cat > ~/wcp_output/profile.json << EOF
           {
             "type": "Proton",
-            "versionName": "${{ env.PROTON_VERSION }}",
+            "versionName": "${{ env.PROTON_VERSION }}-x86_64",
             "versionCode": 0,
             "description": "Valve's Proton compatibility layer converted for Winlator",
             "files": [],
