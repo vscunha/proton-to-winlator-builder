@@ -12,6 +12,7 @@ This project automates the conversion of Valve's Proton compatibility tool into 
 *   **SteamCMD**: Must be used for downloading. Anonymous login does NOT work for Proton; authenticated login is required.
 *   **CI/CD**: The pipeline uses GitHub Actions.
 *   **Secrets**: `STEAM_USERNAME` and `STEAM_PASSWORD` are required secrets. MFA (Steam Guard) is a known blocker for CI; the pipeline must attempt to handle this or assume Steam Guard is disabled/handled via TOTP secrets if implemented.
+*   **Config values**: Environment variables and workflow inputs are configurable; adjusting them does not change the requirements/spec.
 *   **Output Format**: 
     *   Extension: `.wcp` (which is just a renamed `.zip`).
     *   Structure: Root must contain `bin/`, `lib/`, `share/`, and `wcp.json`.
