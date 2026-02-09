@@ -19,6 +19,8 @@ This project automates the conversion of Valve's Proton compatibility tool into 
 - `STEAM_USERNAME`: Steam account username
 - `STEAM_PASSWORD`: Steam account password
 - Note: MFA (Steam Guard) is a known blocker; assume Steam Guard is disabled or handled via TOTP secrets
+### Config Values
+- Environment variables and workflow inputs are configurable; adjusting them does not change the requirements/spec.
 
 ## Coding Guidelines
 
